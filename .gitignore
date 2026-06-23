@@ -1,0 +1,61 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Pytest / unit tests
+.pytest_cache/
+.unittest_cache/
+htmlcov/
+.tox/
+.nosenv/
+.coverage
+.coverage.*
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+
+# Environments & Credentials (CRITICAL)
+.env
+.venv
+venv/
+ENV/
+env.bak
+.env.backup
+.env.production
+
+# Local Databases & MLflow
+mlflow.db
+mlruns/
+.ipynb_checkpoints/
+data/application_train.csv
+data/application_test.csv
+data/home-credit-default-risk.zip
+
+# IDEs
+.vscode/
+.idea/
+.gemini/
