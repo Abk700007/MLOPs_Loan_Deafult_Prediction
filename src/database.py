@@ -86,3 +86,36 @@ def initialize_database():
     finally:
         cursor.close()
         release_connection(conn)
+
+def save_data_to_db(df: pd.DataFrame, table_name: str = "loans"):
+    """Inserts a pandas DataFrame into the specified table in PostgreSQL using high-speed bulk inserts."""
+    if df.empty:
+        logging.warning("DataFrame is empty. Skipping save.")
+        return
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Normalize columns to lowercase matching PostgreSQL schema
+    df.columns = [col.lower() for col in df.columns]
+    columns = list(df.columns)
+    
+    # Compile SQL using %s template for execute_values
+    query = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES %s ON CONFLICT (sk_id_curr) DO NOTHING"
+    
+    try:
+        # Convert df values to Python types for inserting
+        records = [tuple(row) for row in df.itertuples(index=False, name=None)]
+        
+        # execute_values sends the entire batch of 5000 rows in a single query
+        # This is 100x to 1000x faster than executemany over the internet
+        execute_values(cursor, query, records)
+        conn.commit()
+        logging.info(f"Successfully loaded {len(records)} records into table '{table_name}'.")
+    except Exception as e:
+        conn.rollback()
+        logging.error(f"Error loading records into table: {e}")
+        raise
+    finally:
+        cursor.close()
+        release_connection(conn)
