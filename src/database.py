@@ -50,3 +50,39 @@ def release_connection(conn):
         except Exception as e:
             logging.error(f"Error releasing connection back to pool: {e}")
 
+def initialize_database():
+    """Creates the necessary tables if they do not exist."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # We will define a subset of features from Home Credit Default Risk dataset
+    create_table_query = """
+    CREATE TABLE IF NOT EXISTS loans (
+        sk_id_curr INT PRIMARY KEY,
+        target INT,
+        code_gender VARCHAR(10),
+        flag_own_car VARCHAR(5),
+        flag_own_realty VARCHAR(5),
+        cnt_children INT,
+        amt_income_total DOUBLE PRECISION,
+        amt_credit DOUBLE PRECISION,
+        amt_annuity DOUBLE PRECISION,
+        amt_goods_price DOUBLE PRECISION,
+        days_birth INT,
+        days_employed INT,
+        ext_source_2 DOUBLE PRECISION,
+        ext_source_3 DOUBLE PRECISION,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """
+    try:
+        cursor.execute(create_table_query)
+        conn.commit()
+        logging.info("Database initialized and 'loans' table created successfully.")
+    except Exception as e:
+        conn.rollback()
+        logging.error(f"Failed to initialize database: {e}")
+        raise
+    finally:
+        cursor.close()
+        release_connection(conn)
