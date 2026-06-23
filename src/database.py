@@ -119,3 +119,35 @@ def save_data_to_db(df: pd.DataFrame, table_name: str = "loans"):
     finally:
         cursor.close()
         release_connection(conn)
+
+def fetch_data_from_db(table_name: str = "loans") -> pd.DataFrame:
+    """Queries all records from the database and returns them as a pandas DataFrame."""
+    conn = get_connection()
+    query = f"SELECT * FROM {table_name}"
+    try:
+        df = pd.read_sql_query(query, conn)
+        logging.info(f"Successfully fetched {len(df)} records from table '{table_name}'.")
+        return df
+    except Exception as e:
+        logging.error(f"Error fetching data from database: {e}")
+        raise
+    finally:
+        release_connection(conn)
+
+def get_db_summary(table_name: str = "loans"):
+    """Fetches total records and default counts from the database quickly without downloading the entire dataset."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = f"SELECT COUNT(*), SUM(target) FROM {table_name}"
+    try:
+        cursor.execute(query)
+        row = cursor.fetchone()
+        total = row[0] if row else 0
+        defaults = int(row[1]) if row and row[1] is not None else 0
+        return total, defaults
+    except Exception as e:
+        logging.error(f"Error fetching database summary: {e}")
+        return 0, 0
+    finally:
+        cursor.close()
+        release_connection(conn)
