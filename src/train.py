@@ -118,3 +118,30 @@ def train_model():
     # Calculate scale_pos_weight dynamically to balance recall and precision
     scale_pos_weight_value = float(np.sum(y_train == 0) / np.sum(y_train == 1))
     logging.info(f"Calculated scale_pos_weight dynamically: {scale_pos_weight_value:.4f}")
+    
+    # XGBoost Hyperparameters
+    params = {
+        "n_estimators": 150,
+        "max_depth": 4,
+        "learning_rate": 0.05,
+        "subsample": 0.8,
+        "colsample_bytree": 0.8,
+        "scale_pos_weight": scale_pos_weight_value,
+        "random_state": 42,
+        "use_label_encoder": False,
+        "eval_metric": "logloss"
+    }
+    
+    # Enforce monotonic constraints mapped to feature names
+    constraints = {}
+    for col in X_train.columns:
+        if col in ['ext_source_2', 'ext_source_3', 'ext_source_mean', 'ext_source_prod']:
+            constraints[col] = -1
+        elif col in ['annuity_income_ratio', 'credit_income_ratio']:
+            constraints[col] = 1
+            
+    logging.info("Starting model training run...")
+    with mlflow.start_run() as run:
+        # Train model
+        model = xgb.XGBClassifier(**params, monotone_constraints=constraints)
+        model.fit(X_train, y_train)
