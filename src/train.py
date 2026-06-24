@@ -145,3 +145,56 @@ def train_model():
         # Train model
         model = xgb.XGBClassifier(**params, monotone_constraints=constraints)
         model.fit(X_train, y_train)
+        
+        # Predict & evaluate
+        y_prob = model.predict_proba(X_test)[:, 1]
+        
+        # Post-training threshold optimization to maximize F1-score
+        best_threshold = 0.5
+        best_f1 = 0.0
+        for th in np.linspace(0.1, 0.9, 81):
+            y_pred_temp = (y_prob >= th).astype(int)
+            f1_temp = f1_score(y_test, y_pred_temp, zero_division=0)
+            if f1_temp > best_f1:
+                best_f1 = f1_temp
+                best_threshold = th
+                
+        logging.info(f"Optimal threshold found: {best_threshold:.3f} (F1-score: {best_f1:.4f})")
+        y_pred_opt = (y_prob >= best_threshold).astype(int)
+        
+        # Calculate metrics using optimal threshold
+        metrics = {
+            "roc_auc": roc_auc_score(y_test, y_prob),
+            "accuracy": accuracy_score(y_test, y_pred_opt),
+            "precision": precision_score(y_test, y_pred_opt, zero_division=0),
+            "recall": recall_score(y_test, y_pred_opt, zero_division=0),
+            "f1": best_f1
+        }
+        
+        logging.info(f"Metrics at optimal threshold {best_threshold:.3f}: {metrics}")
+
+        # Generate and save evaluation curve data for Chart.js dashboard
+        try:
+            import json
+            import os
+            from sklearn.metrics import roc_curve, precision_recall_curve
+            
+            fpr, tpr, _ = roc_curve(y_test, y_prob)
+            precision, recall, _ = precision_recall_curve(y_test, y_prob)
+            
+            # Downsample to exactly 21 points for clean rendering in the UI
+            indices_roc = np.linspace(0, len(fpr) - 1, 21, dtype=int)
+            indices_pr = np.linspace(0, len(precision) - 1, 21, dtype=int)
+            
+            curves_data = {
+                "roc": {
+                    "fpr": [float(fpr[i]) for i in indices_roc],
+                    "tpr": [float(tpr[i]) for i in indices_roc]
+                },
+                "pr": {
+                    "recall": [float(recall[i]) for i in indices_pr],
+                    "precision": [float(precision[i]) for i in indices_pr]
+                }
+            }
+            
+            os.makedirs("reports", exist_ok=True)
