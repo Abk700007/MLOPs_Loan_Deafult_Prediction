@@ -60,3 +60,48 @@ def check_for_drift() -> tuple[bool, float]:
             
     logging.info(f"Comparing Reference ({len(reference_data)} rows) and Current ({len(current_data)} rows) datasets...")
     
+    # Setup Evidently Report
+    report = Report(metrics=[
+        DataDriftPreset(drift_share=0.35),
+        TargetDriftPreset()
+    ])
+    
+    try:
+        report.run(reference_data=reference_data, current_data=current_data)
+        
+        # Ensure reports directory exists
+        os.makedirs("reports", exist_ok=True)
+        report_html_path = "reports/data_drift_report.html"
+        report.save_html(report_html_path)
+        logging.info(f"Evidently drift dashboard saved to {report_html_path}")
+        
+        # Extract drift metrics
+        report_dict = report.as_dict()
+        metrics_results = report_dict.get("metrics", [])
+        
+        drift_detected = False
+        share_drifted_features = 0.0
+        for metric in metrics_results:
+            metric_type = metric.get("metric")
+            metric_result = metric.get("result", {})
+            
+            if "DatasetDriftMetric" in metric_type or "dataset_drift" in metric_result:
+                drift_detected = metric_result.get("dataset_drift", False)
+                share_drifted_features = metric_result.get("share_of_drifted_columns", 0.0)
+                logging.info(f"Dataset Drift Detected: {drift_detected} (Drifted Feature Share: {share_drifted_features:.2%}, Threshold: 35%)")
+                break
+        
+        # Special override: if database has not received new rows, force drift to False and 0.0%
+        if len(df) <= last_train_db_size:
+            drift_detected = False
+            share_drifted_features = 0.0
+
+        return drift_detected, share_drifted_features
+
+    except Exception as e:
+        logging.error(f"Error running Evidently drift analysis: {e}")
+        return False, 0.0
+
+if __name__ == "__main__":
+    drift, share = check_for_drift()
+    print(f"Drift detected: {drift} (Share: {share:.2%})")
