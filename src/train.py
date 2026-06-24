@@ -198,3 +198,50 @@ def train_model():
             }
             
             os.makedirs("reports", exist_ok=True)
+            with open("reports/evaluation_curves.json", "w") as f:
+                json.dump(curves_data, f)
+            logging.info("Saved ROC and Precision-Recall curve data to reports/evaluation_curves.json")
+        except Exception as curve_err:
+            logging.error(f"Failed to generate evaluation curve data: {curve_err}")
+        
+        # Log to MLflow
+        mlflow.log_params(params)
+        mlflow.log_metrics(metrics)
+        
+        # Log the preprocessing info as an artifact
+        mlflow.log_dict({"categorical_encoders": list(encoders.keys())}, "preprocessing_info.json")
+        
+        # Log and Register the Model in MLflow Model Registry
+        logging.info(f"Logging and registering model under name '{MODEL_NAME}'...")
+        model_info = mlflow.xgboost.log_model(
+            xgb_model=model,
+            artifact_path="model",
+            registered_model_name=MODEL_NAME
+        )
+        
+        # Automatically transition the newly registered version to Production stage
+        try:
+            client = mlflow.tracking.MlflowClient()
+            # Fetch versions in 'None' stage (newly registered)
+            latest_versions = client.get_latest_versions(MODEL_NAME, stages=["None"])
+            if latest_versions:
+                # Match current run_id to locate the correct version
+                target_version = None
+                for mv in latest_versions:
+                    if mv.run_id == run.info.run_id:
+                        target_version = mv.version
+                        break
+                if not target_version:
+                    target_version = latest_versions[0].version
+                
+                logging.info(f"Automatically promoting model version {target_version} to 'Production' stage...")
+                client.transition_model_version_stage(
+                    name=MODEL_NAME,
+                    version=target_version,
+                    stage="Production",
+                    archive_existing_versions=True
+                )
+                logging.info("Model version promoted to Production stage successfully.")
+        except Exception as promo_err:
+            logging.warning(f"Could not automatically promote model version to Production: {promo_err}")
+            
