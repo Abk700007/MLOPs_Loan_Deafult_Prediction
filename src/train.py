@@ -89,3 +89,32 @@ def preprocess_data(df: pd.DataFrame):
         
     return X, y, label_encoders
 
+def train_model():
+    """Fetches data, preprocesses it, trains an XGBoost classifier, and logs to MLflow."""
+    # 1. Fetch data from Supabase database
+    try:
+        df = fetch_data_from_db("loans")
+    except Exception as e:
+        logging.error(f"Failed to fetch data for training: {e}")
+        return None
+        
+    if len(df) < 50:
+        logging.warning("Not enough records in the database to train a model. Need at least 50 records.")
+        return None
+        
+    # 2. Preprocess features
+    X, y, encoders = preprocess_data(df)
+    
+    # 3. Train / Test Split
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+    
+    # 4. Initialize MLflow Experiment
+    if MLFLOW_TRACKING_URI:
+        logging.info("Setting MLflow tracking URI from configuration...")
+        mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+    
+    mlflow.set_experiment(EXPERIMENT_NAME)
+    
+    # Calculate scale_pos_weight dynamically to balance recall and precision
+    scale_pos_weight_value = float(np.sum(y_train == 0) / np.sum(y_train == 1))
+    logging.info(f"Calculated scale_pos_weight dynamically: {scale_pos_weight_value:.4f}")
