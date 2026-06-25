@@ -143,3 +143,66 @@ def load_registered_model():
                 logging.warning(f"Could not cache model locally: {cache_err}")
             return
         except Exception as e:
+            logging.warning(f"Could not load from '{model_uri}': {e}")
+
+    # --- Priority 2: Load from local fallback if MLflow loading failed ---
+    logging.info("MLflow registry load failed. Attempting local fallback model...")
+    if os.path.exists(local_fallback_path):
+        try:
+            import xgboost as xgb
+            raw_model = xgb.XGBClassifier()
+            raw_model.load_model(local_fallback_path)
+            model = FallbackModelWrapper(raw_model)
+            logging.info(f"Model loaded successfully from local fallback: {local_fallback_path}")
+            return
+        except Exception as e_local:
+            logging.error(f"Local fallback model failed to load: {e_local}")
+
+    logging.error("All model load attempts failed. Prediction endpoint will return 503.")
+    model = None
+
+@app.get("/health")
+def health_check():
+    """Endpoint to check health of service and if the model is loaded."""
+    return {
+        "status": "healthy",
+        "model_loaded": model is not None,
+        "model_name": MODEL_NAME
+    }
+
+def preprocess_application(app_data: LoanApplication) -> pd.DataFrame:
+    """Preprocesses Pydantic data class into the exact shape, encoding, and engineered features needed by XGBoost."""
+    from src.train import engineer_features
+    
+    gender_map = {'F': 0, 'M': 1, 'XNA': 2}
+    car_map = {'N': 0, 'Y': 1}
+    realty_map = {'N': 0, 'Y': 1}
+    
+    data_dict = {
+        "code_gender": gender_map.get(app_data.code_gender.upper(), 0),
+        "flag_own_car": car_map.get(app_data.flag_own_car.upper(), 0),
+        "flag_own_realty": realty_map.get(app_data.flag_own_realty.upper(), 0),
+        "cnt_children": app_data.cnt_children,
+        "amt_income_total": app_data.amt_income_total,
+        "amt_credit": app_data.amt_credit,
+        "amt_annuity": app_data.amt_annuity,
+        "amt_goods_price": app_data.amt_goods_price,
+        "days_birth": app_data.days_birth,
+        "days_employed": app_data.days_employed,
+        "ext_source_2": app_data.ext_source_2,
+        "ext_source_3": app_data.ext_source_3
+    }
+    
+    df_base = pd.DataFrame([data_dict])
+    df_feat = engineer_features(df_base)
+    
+    # Order columns to match the training features exactly
+    feature_order = [
+        "code_gender", "flag_own_car", "flag_own_realty", "cnt_children",
+        "amt_income_total", "amt_credit", "amt_annuity", "amt_goods_price",
+        "days_birth", "days_employed", "ext_source_2", "ext_source_3",
+        "annuity_income_ratio", "credit_income_ratio", "goods_credit_ratio",
+        "age_years", "emp_age_ratio", "ext_source_mean", "ext_source_prod"
+    ]
+    
+    return df_feat[feature_order]
