@@ -82,3 +82,64 @@ class FallbackModelWrapper:
     @property
     def _model_impl(self):
         return self._ModelImplWrapper(self.raw)
+
+@app.on_event("startup")
+def load_registered_model():
+    """Loads the model on startup. Tries DagsHub registry first, then falls back to local model if offline/registry fails."""
+    global model
+    logging.info("Starting up API and attempting to load model...")
+    local_fallback_path = "models/fallback_model.json"
+
+    # --- Priority 1: Try DagsHub MLflow Registry (requires network) ---
+    logging.info("Attempting to load from MLflow registry...")
+    for stage in ["Production", "Staging", "1"]:
+        uri_suffix = stage if stage == "1" else stage
+        model_uri = f"models:/{MODEL_NAME}/{uri_suffix}"
+        try:
+            logging.info(f"Trying model URI: {model_uri}")
+            loaded = mlflow.pyfunc.load_model(model_uri)
+
+            # Try to unwrap to raw XGBoost model and save as local fallback
+            try:
+                raw_model = loaded.unwrap_python_model()
+            except Exception:
+                try:
+                    raw_model = loaded._model_impl.python_model if hasattr(loaded._model_impl, "python_model") else None
+                except Exception:
+                    raw_model = None
+
+            if raw_model is None:
+                # For xgboost flavour, access via internal booster
+                try:
+                    booster = loaded._model_impl.xgb_model if hasattr(loaded._model_impl, "xgb_model") else None
+                    if booster is not None:
+                        os.makedirs("models", exist_ok=True)
+                        booster.save_model(local_fallback_path)
+                        logging.info(f"Saved XGBoost booster to {local_fallback_path} for offline fallback.")
+                        # Reload as FallbackModelWrapper for consistent predict interface
+                        xgb_cls = type(booster)
+                        new_raw = xgb.XGBClassifier()
+                        new_raw.load_model(local_fallback_path)
+                        model = FallbackModelWrapper(new_raw)
+                        logging.info(f"Model wrapped and ready from stage '{stage}'.")
+                        return
+                except Exception as booster_err:
+                    logging.warning(f"Could not extract booster for caching: {booster_err}")
+
+            # Use the pyfunc model directly
+            model = loaded
+            logging.info(f"Model loaded from registry stage '{stage}'.")
+
+            # Attempt to save fallback copy for next startup
+            try:
+                os.makedirs("models", exist_ok=True)
+                inner = getattr(loaded, "_model_impl", None)
+                if inner:
+                    xgb_model = getattr(inner, "xgb_model", None) or getattr(inner, "_xgb_model", None)
+                    if xgb_model:
+                        xgb_model.save_model(local_fallback_path)
+                        logging.info(f"Cached model to {local_fallback_path} for next startup.")
+            except Exception as cache_err:
+                logging.warning(f"Could not cache model locally: {cache_err}")
+            return
+        except Exception as e:
