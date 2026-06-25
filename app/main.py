@@ -281,3 +281,145 @@ def db_status():
             "total_records": total,
             "defaults": defaults,
             "default_rate": f"{rate:.2%}",
+            "model_status": model_state,
+            "drift_report_available": report_exists
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/simulate-drift")
+def simulate_drift():
+    """Infects the database with 1,000 highly shifted/drifted records to test auto-retraining."""
+    try:
+        from src.database import fetch_data_from_db, save_data_to_db
+        df = fetch_data_from_db("loans")
+        if len(df) < 500:
+            raise HTTPException(status_code=400, detail="Seed database first (min 500 rows required).")
+            
+        # Sample 1000 records to alter
+        drift_batch = df.sample(n=min(len(df), 1000), random_state=42).copy()
+        
+        # Modify Primary Keys to prevent collision
+        max_id = df['sk_id_curr'].max()
+        drift_batch['sk_id_curr'] = range(max_id + 1, max_id + 1 + len(drift_batch))
+        
+        # Induce massive drift on predictive variables
+        drift_batch['ext_source_2'] = drift_batch['ext_source_2'] * 0.05  # Severe credit degradation
+        drift_batch['ext_source_3'] = drift_batch['ext_source_3'] * 0.05
+        drift_batch['amt_income_total'] = drift_batch['amt_income_total'] * 4.0  # Hyperinflation
+        drift_batch['amt_credit'] = drift_batch['amt_credit'] * 3.0
+        drift_batch['target'] = 1  # 100% defaults
+        
+        # Remove timestamp columns if present
+        if 'created_at' in drift_batch.columns:
+            drift_batch = drift_batch.drop(columns=['created_at'])
+            
+        save_data_to_db(drift_batch)
+        total_records = len(df) + len(drift_batch)
+        return {
+            "success": True,
+            "records_added": len(drift_batch),
+            "total_records": total_records,
+            "message": "Injected 1,000 drifted borrower records into Supabase."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Global MLOps pipeline execution status dictionary for real-time dashboard polling
+pipeline_status = {
+    "status": "idle",
+    "step": "none",
+    "validation_passed": None,
+    "drift_detected": None,
+    "drift_share": 0.0,
+    "retrained": None,
+    "run_id": None,
+    "new_version": None,
+    "error": None,
+    "logs": ""
+}
+
+def run_retraining_pipeline_task():
+    """Background task to run the ML retraining pipeline end-to-end with status tracking and persistent file logging."""
+    global pipeline_status
+    
+    # Silence verbose logs to keep emulator log clean
+    logging.getLogger("great_expectations").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("mlflow").setLevel(logging.WARNING)
+    logging.getLogger("matplotlib").setLevel(logging.WARNING)
+    
+    def log_and_write(msg):
+        global pipeline_status
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_line = f"{timestamp} - INFO - {msg}"
+        logging.info(msg)
+        # Write to in-memory log queue
+        pipeline_status["logs"] += f"{log_line}\n"
+        # Write to persistent file audit log
+        try:
+            os.makedirs("reports", exist_ok=True)
+            with open("reports/pipeline_execution.log", "a", encoding="utf-8") as f:
+                f.write(f"{log_line}\n")
+        except Exception:
+            pass
+
+    try:
+        from src.database import fetch_data_from_db
+        from src.validation import validate_data
+        from src.drift import check_for_drift
+        from src.train import train_model
+        
+        log_and_write("[MLOps] Initializing background pipeline trigger...")
+        pipeline_status["step"] = "ingest"
+        
+        # 1. Ingestion / Local batch ingestion
+        csv_path = "data/application_train.csv"
+        if os.path.exists(csv_path):
+            log_and_write("[MLOps] Ingesting new batch from local Kaggle dataset...")
+            from src.ingestion import ingest_data
+            ingest_data(limit_records=1000)
+        else:
+            log_and_write("[MLOps] Local CSV 'data/application_train.csv' not found. Skipping chunk ingestion.")
+            log_and_write("[MLOps] Processing directly with current Supabase records...")
+            
+        # 2. Validation
+        pipeline_status["step"] = "validate"
+        df = fetch_data_from_db("loans")
+        latest_batch = df.tail(1000)
+        log_and_write(f"[MLOps] Validating latest batch of {len(latest_batch)} records...")
+        is_valid = validate_data(latest_batch)
+        log_and_write(f"[MLOps] Validation result: {is_valid}")
+        pipeline_status["validation_passed"] = is_valid
+        
+        if not is_valid:
+            log_and_write("[MLOps] Validation failed. Retraining aborted.")
+            pipeline_status["status"] = "failed"
+            pipeline_status["error"] = "Data validation failed."
+            return
+            
+        # 3. Drift Check
+        pipeline_status["step"] = "drift"
+        log_and_write("[MLOps] Evaluating dataset drift using Evidently AI...")
+        drift, drift_share = check_for_drift()
+        log_and_write(f"[MLOps] Drift check completed. Drift detected: {drift} (Drift Share: {drift_share:.2%})")
+        pipeline_status["drift_detected"] = drift
+        pipeline_status["drift_share"] = float(drift_share)
+        
+        # 4. Retraining & Hot-Reload
+        run_id = None
+        new_version = None
+        if drift:
+            pipeline_status["step"] = "retrain"
+            log_and_write("[MLOps] Concept drift detected. Retraining model...")
+            run_id = train_model()
+            log_and_write(f"[MLOps] Model retrained successfully. Registered to DagsHub. Run ID: {run_id}")
+            
+            pipeline_status["step"] = "reload"
+            log_and_write("[MLOps] Reloading active model in serving layer...")
+            load_registered_model()
+            
+            pipeline_status["retrained"] = True
+            pipeline_status["run_id"] = run_id
+            
