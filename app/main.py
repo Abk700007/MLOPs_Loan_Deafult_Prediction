@@ -423,3 +423,125 @@ def run_retraining_pipeline_task():
             pipeline_status["retrained"] = True
             pipeline_status["run_id"] = run_id
             
+            # Resolve version number
+            try:
+                from mlflow.tracking import MlflowClient
+                client = MlflowClient()
+                latest_versions = client.get_latest_versions(MODEL_NAME)
+                for mv in latest_versions:
+                    if mv.run_id == run_id:
+                        new_version = mv.version
+                        break
+                pipeline_status["new_version"] = new_version
+            except Exception as e:
+                log_and_write(f"[WARNING] Could not resolve new version number: {e}")
+        else:
+            log_and_write("[MLOps] Drift is below threshold. Retraining skipped. Production model retained.")
+            pipeline_status["retrained"] = False
+            
+        log_and_write("[MLOps] Pipeline completed successfully.")
+        pipeline_status["step"] = "reload" # Marked step complete
+        pipeline_status["status"] = "success"
+        
+    except Exception as e:
+        log_err = f"[MLOps] Pipeline execution crashed: {e}"
+        logging.error(log_err)
+        pipeline_status["logs"] += f"{log_err}\n"
+        pipeline_status["status"] = "failed"
+        pipeline_status["error"] = str(e)
+
+@app.post("/trigger-retrain")
+def trigger_retrain(background_tasks: BackgroundTasks):
+    """Triggers the retraining pipeline in the background using FastAPI BackgroundTasks."""
+    global pipeline_status
+    if pipeline_status["status"] == "running":
+        raise HTTPException(status_code=400, detail="Retraining pipeline is already executing.")
+        
+    # Reset status fields
+    pipeline_status = {
+        "status": "running",
+        "step": "ingest",
+        "validation_passed": None,
+        "drift_detected": None,
+        "drift_share": 0.0,
+        "retrained": None,
+        "run_id": None,
+        "new_version": None,
+        "error": None,
+        "logs": ">>> Initializing MLOps retraining pipeline...\n"
+    }
+    
+    # Enqueue task
+    background_tasks.add_task(run_retraining_pipeline_task)
+    return {"success": True, "message": "Pipeline triggered asynchronously in background."}
+
+@app.get("/pipeline-status")
+def get_pipeline_status():
+    """Returns the current state and execution logs of the background retraining task."""
+    global pipeline_status
+    return pipeline_status
+
+@app.post("/reset-db")
+def reset_db():
+    """Resets the Supabase loans database to the original 50,000 clean records."""
+    try:
+        from src.database import get_connection
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        # Delete all simulated/drifted records
+        cursor.execute("DELETE FROM loans WHERE sk_id_curr > 157876")
+        
+        # Force PostgreSQL to update statistics so the Supabase UI row count updates instantly
+        cursor.execute("ANALYZE loans")
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        # Reset metadata baseline training size to 50000
+        import json
+        metadata_path = "reports/pipeline_metadata.json"
+        metadata = {"last_train_db_size": 50000}
+        os.makedirs("reports", exist_ok=True)
+        with open(metadata_path, "w") as f:
+            json.dump(metadata, f)
+            
+        # Regenerate the Evidently HTML report using the clean database
+        from src.drift import check_for_drift
+        check_for_drift()
+            
+        logging.info("Database reset: kept first 50,000 records, updated stats, and generated clean drift report.")
+        return {"success": True, "message": "Database successfully reset to original 50,000 clean records."}
+    except Exception as e:
+        logging.error(f"Error resetting database: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/drift-report")
+def get_drift_report():
+    """Serves the Evidently AI Data Drift HTML report."""
+    report_path = "reports/data_drift_report.html"
+    if os.path.exists(report_path):
+        return FileResponse(report_path)
+    return HTMLResponse("<h3>No drift report generated yet. Run the retraining pipeline first.</h3>")
+
+@app.get("/model-metrics")
+def get_model_metrics():
+    """Queries MLflow for the active registered model's metrics."""
+    try:
+        from mlflow.tracking import MlflowClient
+        client = MlflowClient()
+        
+        # Resolve latest version
+        latest_versions = client.get_latest_versions(MODEL_NAME)
+        if not latest_versions:
+            raise ValueError("No models registered")
+            
+        prod_version = None
+        for mv in latest_versions:
+            if mv.current_stage == "Production":
+                prod_version = mv
+                break
+        if not prod_version:
+            for mv in latest_versions:
+                if mv.current_stage == "Staging":
+                    prod_version = mv
