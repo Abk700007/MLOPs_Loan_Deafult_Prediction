@@ -206,3 +206,78 @@ def preprocess_application(app_data: LoanApplication) -> pd.DataFrame:
     ]
     
     return df_feat[feature_order]
+
+@app.post("/predict")
+def predict_default(application: LoanApplication):
+    """Receives loan application data and returns calibrated probability of default."""
+    global model
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model is currently not loaded or registered on MLflow. Please check logs.")
+        
+    try:
+        features_df = preprocess_application(application)
+        raw_model = model._model_impl.get_raw_model()
+        
+        # 1. Get raw weighted probability from XGBoost
+        prob_w = float(raw_model.predict_proba(features_df)[0][1])
+        
+        # 2. Load optimal threshold from metadata if available (fallback to 0.5)
+        optimal_threshold = 0.5
+        metadata_path = "reports/pipeline_metadata.json"
+        if os.path.exists(metadata_path):
+            try:
+                import json
+                with open(metadata_path, "r") as f:
+                    metadata = json.load(f)
+                    optimal_threshold = metadata.get("optimal_threshold", 0.5)
+            except Exception:
+                pass
+                
+        # 3. Get calibration weight from database or fallback to baseline
+        w = 11.419  # Default baseline scale_pos_weight
+        try:
+            from src.database import get_db_summary
+            total, defaults = get_db_summary("loans")
+            if total > 0 and defaults > 0:
+                w = (total - defaults) / defaults
+        except Exception:
+            pass
+            
+        # Calibrate predicted probability: p = prob_w / (prob_w + w * (1.0 - prob_w) + 1e-9)
+        calibrated_prob = prob_w / (prob_w + w * (1.0 - prob_w) + 1e-9)
+        calibrated_prob = min(max(calibrated_prob, 0.0), 1.0)
+        
+        # 4. Make prediction based on optimal threshold
+        prediction = 1 if prob_w >= optimal_threshold else 0
+        
+        return {
+            "default_probability": float(calibrated_prob),
+            "default_prediction": prediction,
+            "risk_status": "High Risk" if prob_w >= optimal_threshold else "Low Risk",
+            "optimal_threshold": optimal_threshold
+        }
+    except Exception as e:
+        logging.error(f"Error during prediction: {e}")
+        raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
+
+# =====================================================================
+# FULLSTACK INTERACTIVE DASHBOARD & MLOPS WIDGETS
+# =====================================================================
+
+@app.get("/db-status")
+def db_status():
+    """Returns basic counts and default statistics from Supabase."""
+    try:
+        from src.database import get_db_summary
+        total, defaults = get_db_summary("loans")
+        rate = (defaults / total) if total > 0 else 0
+        
+        report_exists = os.path.exists("reports/data_drift_report.html")
+        
+        global model
+        model_state = "Loaded Successfully" if model is not None else "Not Registered/None"
+        
+        return {
+            "total_records": total,
+            "defaults": defaults,
+            "default_rate": f"{rate:.2%}",
