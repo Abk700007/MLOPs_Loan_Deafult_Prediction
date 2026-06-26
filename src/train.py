@@ -245,3 +245,26 @@ def train_model():
         except Exception as promo_err:
             logging.warning(f"Could not automatically promote model version to Production: {promo_err}")
             
+        # Update pipeline_metadata.json with new base size and optimal threshold
+        try:
+            import json
+            import os
+            metadata_path = "reports/pipeline_metadata.json"
+            metadata = {}
+            if os.path.exists(metadata_path):
+                with open(metadata_path, "r") as f:
+                    metadata = json.load(f)
+            metadata["last_train_db_size"] = len(df)
+            metadata["optimal_threshold"] = float(best_threshold)
+            os.makedirs("reports", exist_ok=True)
+            with open(metadata_path, "w") as f:
+                json.dump(metadata, f)
+            logging.info(f"Saved baseline database size of {len(df)} and optimal threshold {best_threshold:.3f} to reports/pipeline_metadata.json")
+        except Exception as meta_err:
+            logging.warning(f"Could not save pipeline metadata: {meta_err}")
+            
+        logging.info(f"Model training successfully completed. Run ID: {run.info.run_id}")
+        return run.info.run_id
+
+if __name__ == "__main__":
+    train_model()
