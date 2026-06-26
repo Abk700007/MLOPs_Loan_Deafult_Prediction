@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MLOps Loan Default Prediction – Interactive Architecture Viewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #080c14;
+      --panel-bg: rgba(15, 23, 42, 0.65);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --accent-blue: #38bdf8;
+      --accent-orange: #f59e0b;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --font-display: 'Outfit', sans-serif;
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      background: rgba(8, 12, 20, 0.8);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--panel-border);
+      padding: 1.25rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-logo {
+      width: 2rem;
+      height: 2rem;
+      background: linear-gradient(135deg, var(--accent-blue), #818cf8);
+      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: #0f172a;
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+    }
+
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      position: relative;
+    }
+
+    .canvas-container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      background-image: radial-gradient(circle at 50% 50%, #0f172a 0%, #080c14 100%);
+      position: relative;
+    }
+
+    .svg-wrapper {
+      width: 100%;
+      max-width: 1000px;
+      height: auto;
+      aspect-ratio: 1200 / 800;
+      filter: drop-shadow(0 20px 50px rgba(0, 0, 0, 0.5));
+    }
+
+    /* SVG interactivity overrides */
+    .node-group {
+      transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), filter 0.3s ease;
+    }
+    
+    .node-group:hover .node-card {
+      stroke: var(--accent-blue) !important;
+      stroke-width: 2px !important;
+      filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.3));
+    }
+
+    .dimmed {
+      opacity: 0.25 !important;
+    }
+
+    .highlighted {
+      opacity: 1 !important;
+    }
+
+    .highlighted .node-card {
+      stroke: var(--accent-blue) !important;
+      stroke-width: 2.5px !important;
+      filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.6)) !important;
+    }
+
+    .highlighted-flow {
+      stroke-width: 4px !important;
+      animation-duration: 0.6s !important;
+    }
+
+    /* Sidebar controls */
+    .sidebar {
+      width: 380px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      border-left: 1px solid var(--panel-border);
+      display: flex;
+      flex-direction: column;
+      padding: 1.75rem;
+      gap: 1.5rem;
+      z-index: 5;
+      overflow-y: auto;
+    }
+
+    .control-card {
+      background: rgba(30, 41, 59, 0.3);
+      border: 1px solid var(--panel-border);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .btn {
+      background: #1e293b;
+      color: var(--text-main);
+      border: 1px solid var(--panel-border);
+      border-radius: 0.5rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: #334155;
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-primary {
+      background: var(--accent-blue);
+      color: #0f172a;
+      border: none;
+    }
+
+    .btn-primary:hover {
+      background: #7dd3fc;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+    }
+
+    .slider-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      width: 100%;
+    }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #1e293b;
+      border-radius: 3px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* Steps list */
+    .steps-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .step-item {
+      background: rgba(30, 41, 59, 0.2);
+      border: 1px solid transparent;
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      transition: all 0.2s;
+    }
+
+    .step-item:hover {
+      background: rgba(30, 41, 59, 0.4);
+    }
+
+    .step-item.active {
+      background: rgba(56, 189, 248, 0.1);
+      border-color: rgba(56, 189, 248, 0.25);
+      font-weight: 600;
+    }
+
+    .step-num {
+      width: 1.5rem;
+      height: 1.5rem;
+      background: #1e293b;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .active .step-num {
+      background: var(--accent-blue);
+      color: #0f172a;
+    }
+
+    /* Explanation Panel */
+    .explanation-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .explanation-title {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--accent-blue);
+    }
+
+    .explanation-desc {
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: #cbd5e1;
+    }
+
+    .meta-tag {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid var(--panel-border);
+      border-radius: 0.35rem;
+      padding: 0.35rem 0.5rem;
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: var(--accent-blue);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      margin-top: 0.5rem;
+    }
+
+    .nav-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: auto;
+    }
+
+    .nav-buttons button {
+      flex: 1;
+    }
+
+    .tooltip {
+      position: absolute;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--accent-blue);
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      font-size: 0.8rem;
+      pointer-events: none;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 100;
+      max-width: 250px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-logo">🚀</div>
+      <div>
+        <h1 class="brand-title">MLOps Loan Default Prediction</h1>
+        <p class="brand-subtitle">Interactive Architecture &amp; Workflow Pipeline Explorer</p>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="btnReset">Reset Highlights</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Left: SVG Canvas -->
+    <div class="canvas-container">
+      <div class="svg-wrapper" id="svgContainer">
+        <!-- SVG Content Inlined for DOM Manipulation -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="100%" height="100%" id="architectureSvg">
+          <defs>
+            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255, 255, 255, 0.03)" stroke-width="1"/>
+            </pattern>
+            <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#1e293b" />
+              <stop offset="100%" stop-color="#0f172a" />
+            </linearGradient>
+            <linearGradient id="airflowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#172554" />
+              <stop offset="100%" stop-color="#0f172a" />
+            </linearGradient>
+            <linearGradient id="monitoringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#2d1500" />
+              <stop offset="100%" stop-color="#0f172a" />
+            </linearGradient>
+            <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="5" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+            <filter id="glow-orange" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="5" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+            <filter id="glow-green" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="5" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+            <filter id="glow-red" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="5" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+            <marker id="arrow-cyan" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#00d2ff" />
+            </marker>
+            <marker id="arrow-orange" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#ff9f00" />
+            </marker>
+            <marker id="arrow-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#39ff14" />
+            </marker>
+            <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#ff4d4d" />
+            </marker>
+          </defs>
+          <style>
+            text { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; fill: #f8fafc; }
+            .title { font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 800; fill: #f8fafc; letter-spacing: -0.5px; }
+            .subtitle { font-size: 14px; font-weight: 400; fill: #94a3b8; }
+            .node-card { stroke: #334155; stroke-width: 1.5; fill-opacity: 0.9; transition: all 0.3s ease; }
+            .node-title { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; fill: #f1f5f9; }
+            .node-desc { font-size: 11px; fill: #94a3b8; }
+            .tech-badge { font-size: 10px; font-weight: 600; fill: #cbd5e1; }
+            @keyframes flow-dash { to { stroke-dashoffset: -40; } }
+            .track-line { fill: none; stroke: #141b2d; stroke-width: 2.5; }
+            .flow-line-blue { fill: none; stroke: #00d2ff; stroke-width: 2.5; stroke-dasharray: 8, 6; animation: flow-dash 1.2s linear infinite; }
+            .flow-line-orange { fill: none; stroke: #ff9f00; stroke-width: 2.5; stroke-dasharray: 8, 6; animation: flow-dash 1.4s linear infinite; }
+            .flow-line-green { fill: none; stroke: #39ff14; stroke-width: 2.5; stroke-dasharray: 8, 6; animation: flow-dash 1.3s linear infinite; }
+            .flow-line-red { fill: none; stroke: #ff4d4d; stroke-width: 2.5; stroke-dasharray: 8, 6; animation: flow-dash 1s linear infinite; }
+            .airflow-subtask { fill: #1e293b; stroke: #334155; stroke-width: 1; rx: 6; }
+            .airflow-subtask-active { fill: #0f172a; stroke: #38bdf8; stroke-width: 1.5; rx: 6; }
+            .subtask-text { font-size: 11px; font-weight: 600; fill: #e2e8f0; text-anchor: middle; }
+            .tech-stack-bg { fill: #080c14; stroke: #1e293b; stroke-width: 1.5; rx: 12; }
+          </style>
+          <rect width="100%" height="100%" fill="#080c14" />
+          <rect width="100%" height="100%" fill="url(#grid)" />
+          
+          <!-- FLOW LINES -->
+          <path id="track-1" class="track-line" d="M 230 185 L 290 185" />
+          <path id="flow-1" class="flow-line-blue" d="M 230 185 L 290 185" marker-end="url(#arrow-cyan)" />
+          
+          <path id="track-2" class="track-line" d="M 470 185 L 530 185" />
+          <path id="flow-2" class="flow-line-blue" d="M 470 185 L 530 185" marker-end="url(#arrow-cyan)" />
+          
+          <path id="track-3" class="track-line" d="M 870 185 L 930 185" />
+          <path id="flow-3" class="flow-line-green" d="M 870 185 L 930 185" marker-end="url(#arrow-green)" />
+          
+          <path id="track-4" class="track-line" d="M 1020 230 L 1020 380" />
+          <path id="flow-4" class="flow-line-green" d="M 1020 230 L 1020 380" marker-end="url(#arrow-green)" />
+          
+          <path id="track-5" class="track-line" d="M 930 425 L 870 425" />
+          <path id="flow-5" class="flow-line-blue" d="M 930 425 L 870 425" marker-end="url(#arrow-cyan)" />
+          
+          <path id="track-6" class="track-line" d="M 690 425 L 630 425" />
+          <path id="flow-6" class="flow-line-blue" d="M 690 425 L 630 425" marker-end="url(#arrow-cyan)" />
+          
+          <path id="track-7" class="track-line" d="M 540 380 L 540 310 L 380 310 L 380 230" />
+          <path id="flow-7" class="flow-line-orange" d="M 540 380 L 540 310 L 380 310 L 380 230" marker-end="url(#arrow-orange)" />
+          
+          <path id="track-8" class="track-line" d="M 350 230 L 350 290 L 260 290 L 260 380" />
+          <path id="flow-8" class="flow-line-orange" d="M 350 230 L 350 290 L 260 290 L 260 380" marker-end="url(#arrow-orange)" />
+          
+          <path id="track-9" class="track-line" d="M 450 425 L 390 425" />
+          <path id="flow-9" class="flow-line-orange" d="M 450 425 L 390 425" marker-end="url(#arrow-orange)" />
+          
+          <path id="track-10" class="track-line" d="M 280 490 L 280 540" />
+          <path id="flow-10" class="flow-line-orange" d="M 280 490 L 280 540" marker-end="url(#arrow-orange)" />
+          
+          <path id="track-11" class="track-line" d="M 330 590 L 410 590" />
+          <path id="flow-11" class="flow-line-red" d="M 330 590 L 410 590" marker-end="url(#arrow-red)" />
+          
+          <path id="track-12" class="track-line" d="M 230 590 L 170 590" />
+          <path id="flow-12" class="flow-line-green" d="M 230 590 L 170 590" marker-end="url(#arrow-green)" />
+          
+          <path id="track-13" class="track-line" d="M 510 550 L 510 510 L 700 510 L 700 260" />
+          <path id="flow-13" class="flow-line-red" d="M 510 550 L 510 510 L 700 510 L 700 260" marker-end="url(#arrow-red)" />
+
+          <!-- NODES -->
+          <!-- STEP 1: Data Sources -->
+          <g class="node-group" id="node-1" transform="translate(50, 140)">
+            <rect width="180" height="90" fill="url(#cardGrad)" class="node-card" rx="10" />
+            <text x="15" y="25" class="node-title">1. Data Sources</text>
+            <text x="15" y="45" class="node-desc">Loan Applications</text>
+            <text x="15" y="60" class="node-desc">New Customer Profile Data</text>
+            <circle cx="150" cy="45" r="16" fill="#1e293b" stroke="#475569" stroke-width="1" />
+            <path d="M 144 52 C 144 48 147 46 150 46 C 153 46 156 48 156 52 Z M 150 44 C 147.8 44 146 42.2 146 40 C 146 37.8 147.8 36 150 36 C 152.2 36 154 37.8 154 40 C 154 42.2 152.2 44 150 44 Z" fill="#38bdf8" />
+          </g>
+
+          <!-- STEP 2: PostgreSQL Database -->
+          <g class="node-group" id="node-2" transform="translate(290, 140)">
+            <rect width="180" height="90" fill="url(#cardGrad)" class="node-card" rx="10" />
+            <circle cx="150" cy="45" r="16" fill="#1e293b" stroke="#336791" stroke-width="1" />
+            <path d="M 143 43 C 143 38 148 37 151 37 C 154 37 157 39 157 42 C 157 45 155 46 153 47 C 152 48 153 50 151 51 C 149 52 147 50 146 49 C 145 49 144 47 143 45 Z" fill="#336791" />
+            <path d="M 142 45 L 140 47 L 141 49 C 141 49 143 46 142 45 Z" fill="#cbd5e1" />
+            <text x="15" y="25" class="node-title">2. PostgreSQL DB</text>
+            <text x="15" y="45" class="node-desc">Stores Raw Loans</text>
+            <text x="15" y="60" class="node-desc">Historical &amp; Live Batches</text>
+            <rect x="15" y="70" width="70" height="14" fill="#1e293b" rx="3" />
+            <text x="20" y="81" class="tech-badge">POSTGRESQL</text>
+          </g>
+
+          <!-- STEP 3: Apache Airflow (Orchestrator Box) -->
+          <g class="node-group" id="node-3" transform="translate(530, 110)">
+            <rect width="340" height="150" fill="url(#airflowGrad)" class="node-card" rx="12" />
+            <g transform="translate(305, 30) scale(0.8)">
+              <circle cx="0" cy="0" r="16" fill="#0f172a" stroke="#017cee" stroke-width="1" />
+              <path d="M -6 -6 C -6 -12 0 -12 0 -6 L 0 0 L -6 0 Z" fill="#017cee" />
+              <path d="M 6 -6 C 12 -6 12 0 6 0 L 0 0 L 0 -6 Z" fill="#ff4d4d" />
+              <path d="M 6 6 C 6 12 0 12 0 6 L 0 0 L 6 0 Z" fill="#ff9f00" />
+              <path d="M -6 6 C -12 6 -12 0 -6 0 L 0 0 L 0 6 Z" fill="#39ff14" />
+            </g>
+            <text x="20" y="30" class="node-title" font-size="15">3. Apache Airflow Pipeline</text>
+            <text x="20" y="48" class="node-desc" fill="#94a3b8">DAG orchestration for scheduled weekly training runs</text>
+            
+            <g transform="translate(20, 75)" id="sub-ingestion">
+              <rect width="65" height="50" class="airflow-subtask" />
+              <text x="32.5" y="22" class="subtask-text">run_</text>
+              <text x="32.5" y="37" class="subtask-text">ingestion</text>
+            </g>
+            <path d="M 90 100 L 98 100" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow-cyan)" />
+
+            <g transform="translate(103, 75)" id="sub-validation">
+              <rect width="65" height="50" class="airflow-subtask" />
+              <text x="32.5" y="22" class="subtask-text">run_</text>
+              <text x="32.5" y="37" class="subtask-text">validation</text>
+              <circle cx="58" cy="8" r="5" fill="#ff5a5f" />
+            </g>
+            <path d="M 173 100 L 181 100" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow-cyan)" />
+
+            <g transform="translate(186, 75)" id="sub-drift">
+              <rect width="65" height="50" class="airflow-subtask" />
+              <text x="32.5" y="22" class="subtask-text">check_</text>
+              <text x="32.5" y="37" class="subtask-text">drift</text>
+              <circle cx="58" cy="8" r="5" fill="#7e3af2" />
+            </g>
+            <path d="M 256 100 L 264 100" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow-cyan)" />
+
+            <g transform="translate(269, 75)" id="sub-retrain">
+              <rect width="55" height="50" class="airflow-subtask" />
+              <text x="27.5" y="22" class="subtask-text">retrain_</text>
+              <text x="27.5" y="37" class="subtask-text">model</text>
+              <circle cx="48" cy="8" r="5" fill="#0194e2" />
+            </g>
+          </g>
+
+          <!-- STEP 4: MLflow Registry -->
+          <g class="node-group" id="node-4" transform="translate(930, 140)">
+            <rect width="180" height="90" fill="url(#cardGrad)" class="node-card" rx="10" />
+            <circle cx="150" cy="45" r="16" fill="#1e293b" stroke="#0194e2" stroke-width="1" />
+            <path d="M 140 45 Q 145 35 150 45 T 160 45" fill="none" stroke="#0194e2" stroke-width="2" />
+            <text x="15" y="25" class="node-title">4. MLflow Registry</text>
+            <text x="15" y="45" class="node-desc">Model Registry</text>
+            <text x="15" y="60" class="node-desc">&amp; Parameter Tracking</text>
+            <rect x="15" y="70" width="55" height="14" fill="#1e293b" rx="3" />
+            <text x="20" y="81" class="tech-badge">MLFLOW</text>
+          </g>
+
+          <!-- STEP 5: FastAPI Service -->
+          <g class="node-group" id="node-5" transform="translate(930, 380)">
+            <rect width="180" height="90" fill="url(#cardGrad)" class="node-card" rx="10" />
+            <circle cx="150" cy="45" r="16" fill="#1e293b" stroke="#059669" stroke-width="1" />
+            <path d="M 151 35 L 144 45 L 149 45 L 147 55 L 155 43 L 150 43 Z" fill="#059669" />
+            <text x="15" y="25" class="node-title">5. FastAPI Service</text>
+            <text x="15" y="45" class="node-desc">Inference API Endpoint</text>
+            <text x="15" y="60" class="node-desc">Loads 'Production' Model</text>
+            <rect x="15" y="70" width="50" height="14" fill="#1e293b" rx="3" />
+            <text x="20" y="81" class="tech-badge">FASTAPI</text>
+          </g>
+
+          <!-- STEP 6: Docker / Cloud Deployment -->
+          <g class="node-group" id="node-6" transform="translate(690, 380)">
+            <rect width="180" height="90" fill="url(#cardGrad)" class="node-card" rx="10" />
+            <circle cx="150" cy="45" r="16" fill="#1e293b" stroke="#2496ed" stroke-width="1" />
+            <path d="M 139 46 Q 140 40 148 40 L 154 40 Q 158 40 160 44 L 161 46 Q 163 46 163 48 Q 161 52 145 52 L 139 52 Z" fill="#2496ed" />
+            <rect x="144" y="36" width="4" height="3" fill="#cbd5e1" />
+            <rect x="149" y="36" width="4" height="3" fill="#cbd5e1" />
+            <text x="15" y="25" class="node-title">6. Container Cloud</text>
+            <text x="15" y="45" class="node-desc">Dockerized App Host</text>
+            <text x="15" y="60" class="node-desc">AWS EC2 / Render Deployment</text>
+            <rect x="15" y="70" width="50" height="14" fill="#1e293b" rx="3" />
+            <text x="20" y="81" class="tech-badge">DOCKER</text>
+          </g>
+
+          <!-- STEP 7: Predictions -->
+          <g class="node-group" id="node-7" transform="translate(450, 380)">
+            <rect width="180" height="90" fill="url(#cardGrad)" class="node-card" rx="10" />
+            <circle cx="150" cy="45" r="16" fill="#1e293b" stroke="#a855f7" stroke-width="1" />
+            <rect x="142" y="44" width="4" height="8" fill="#a855f7" />
+            <rect x="148" y="39" width="4" height="13" fill="#a855f7" />
+            <rect x="154" y="42" width="4" height="10" fill="#a855f7" />
+            <text x="15" y="25" class="node-title">7. Predictions</text>
+            <text x="15" y="45" class="node-desc">Returned to Client App</text>
+            <text x="15" y="60" class="node-desc">Logged back to DB for Audit</text>
+            <rect x="15" y="70" width="55" height="14" fill="#1e293b" rx="3" />
+            <text x="20" y="81" class="tech-badge">REALTIME</text>
+          </g>
+
+          <!-- STEP 8: Evidently AI (Monitoring Dashboard) -->
+          <g class="node-group" id="node-8" transform="translate(150, 380)">
+            <rect width="240" height="110" fill="url(#monitoringGrad)" class="node-card" rx="12" />
+            <circle cx="210" cy="35" r="16" fill="#0f172a" stroke="#7e3af2" stroke-width="1" />
+            <path d="M 202 38 L 208 30 L 212 36 L 218 32" fill="none" stroke="#7e3af2" stroke-width="2.5" />
+            <circle cx="218" cy="32" r="1.5" fill="#7e3af2" />
+            <text x="15" y="25" class="node-title" fill="#ff9f00">8. Evidently AI Monitor</text>
+            <text x="15" y="45" class="node-desc" fill="#e2e8f0">Runs validation of prediction drift</text>
+            <rect x="15" y="58" width="65" height="18" fill="#1e293b" rx="3" />
+            <text x="20" y="70" font-size="9" fill="#e2e8f0" font-weight="600">Data Drift</text>
+            <rect x="85" y="58" width="65" height="18" fill="#1e293b" rx="3" />
+            <text x="90" y="70" font-size="9" fill="#e2e8f0" font-weight="600">Target Drift</text>
+            <rect x="155" y="58" width="70" height="18" fill="#1e293b" rx="3" />
+            <text x="160" y="70" font-size="9" fill="#e2e8f0" font-weight="600">Perf Loss</text>
+            <text x="15" y="95" class="node-desc" fill="#94a3b8">Saves dashboard report to HTML</text>
+          </g>
+
+          <!-- STEP 9: Drift Decision Diamond -->
+          <g class="node-group" id="node-9" transform="translate(230, 540)">
+            <polygon points="50,0 100,50 50,100 0,50" fill="url(#cardGrad)" stroke="#ff9f00" stroke-width="1.5" class="node-card" />
+            <text x="50" y="45" font-size="11" font-weight="700" fill="#f8fafc" text-anchor="middle">Data Drift</text>
+            <text x="50" y="60" font-size="11" font-weight="700" fill="#f8fafc" text-anchor="middle">Detected?</text>
+            <text x="112" y="40" font-size="11" font-weight="700" fill="#ff4d4d">Yes</text>
+            <text x="-22" y="40" font-size="11" font-weight="700" fill="#39ff14">No</text>
+          </g>
+
+          <!-- STEP 10: Continue Using Current Model -->
+          <g class="node-group" id="node-10" transform="translate(30, 560)">
+            <rect width="140" height="60" fill="url(#cardGrad)" stroke="#39ff14" stroke-dasharray="4,2" class="node-card" rx="8" />
+            <text x="12" y="25" font-size="11" font-weight="700" fill="#39ff14">✔ Safe Status</text>
+            <text x="12" y="42" class="node-desc">Current production</text>
+            <text x="12" y="52" class="node-desc">model remains active</text>
+          </g>
+
+          <!-- STEP 11: Trigger Retraining -->
+          <g class="node-group" id="node-11" transform="translate(410, 550)">
+            <rect width="200" height="80" fill="url(#cardGrad)" stroke="#ff4d4d" class="node-card" rx="10" />
+            <g transform="translate(170, 40) scale(0.9)">
+              <circle cx="0" cy="0" r="14" fill="#1e293b" stroke="#ff4d4d" stroke-width="1.5" />
+              <path d="M -6 -2 A 7 7 0 1 1 5 4 L 8 4" fill="none" stroke="#ff4d4d" stroke-width="2" />
+              <path d="M 5 1 L 8 4 L 5 7" fill="none" stroke="#ff4d4d" stroke-width="2" />
+            </g>
+            <text x="15" y="25" class="node-title" fill="#ff4d4d">9. Trigger Retraining</text>
+            <text x="15" y="45" class="node-desc">Branch activates in Airflow</text>
+            <text x="15" y="60" class="node-desc">Starts 'retrain_model' operator</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Right: Sidebar Controls & Explanation -->
+    <div class="sidebar">
+      <div class="control-card">
+        <h2 class="card-title">⚙️ Flow Controls</h2>
+        <div class="control-row">
+          <button class="btn btn-primary" id="btnPlayPause">⏸ Pause Flow</button>
+        </div>
+        <div class="slider-container">
+          <div class="slider-label">
+            <span>Speed</span>
+            <span id="speedVal">1.0x</span>
+          </div>
+          <input type="range" id="speedSlider" min="0.2" max="3" step="0.1" value="1">
+        </div>
+      </div>
+
+      <div class="control-card">
+        <h2 class="card-title">📖 Pipeline Stages</h2>
+        <div class="steps-list">
+          <div class="step-item" data-step="1">
+            <div class="step-num">1</div>
+            <div>Data Sources</div>
+          </div>
+          <div class="step-item" data-step="2">
+            <div class="step-num">2</div>
+            <div>PostgreSQL DB</div>
+          </div>
+          <div class="step-item" data-step="3">
+            <div class="step-num">3</div>
+            <div>Apache Airflow Pipeline</div>
+          </div>
+          <div class="step-item" data-step="4">
+            <div class="step-num">4</div>
+            <div>MLflow Model Registry</div>
+          </div>
+          <div class="step-item" data-step="5">
+            <div class="step-num">5</div>
+            <div>FastAPI serving API</div>
+          </div>
+          <div class="step-item" data-step="6">
+            <div class="step-num">6</div>
+            <div>Docker &amp; Cloud Host</div>
+          </div>
+          <div class="step-item" data-step="7">
+            <div class="step-num">7</div>
+            <div>Predictions Feedback</div>
+          </div>
+          <div class="step-item" data-step="8">
+            <div class="step-num">8</div>
+            <div>Evidently AI Monitoring</div>
+          </div>
+          <div class="step-item" data-step="9">
+            <div class="step-num">9</div>
+            <div>Trigger Model Retrain</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage Explanation Panel (Dynamic) -->
+      <div class="control-card" style="flex: 1; display: flex; flex-direction: column;">
+        <h2 class="card-title">💡 Explanation</h2>
+        <div id="explanationContainer" class="explanation-panel">
+          <h3 class="explanation-title" id="expTitle">Select a step to inspect</h3>
+          <p class="explanation-desc" id="expDesc">Click any of the stages in the list above, or click directly on the diagram cards to highlight details and view implementing files.</p>
+          <div id="metaContainer"></div>
+        </div>
+        <div class="nav-buttons">
+          <button class="btn" id="btnPrev">◀ Previous</button>
+          <button class="btn" id="btnNext">Next ▶</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const stepsData = {
+      1: {
+        title: "1. Data Sources",
+        desc: "Loan application requests initiated by new customers are generated dynamically. This represents raw external input containing profile records, personal identifiers, and financial parameters.",
+        meta: "Input stream",
+        nodes: ["node-1"],
+        flows: ["flow-1"]
+      },
+      2: {
+        title: "2. PostgreSQL Database",
+        desc: "Serves as the primary transactional datastore. Newly ingested batches of loan records are recorded here for auditing and future baseline adjustments. The database exposes transactional schemas for ingestion and validation checks.",
+        meta: "src/database.py",
+        nodes: ["node-2"],
+        flows: ["flow-2", "flow-8"]
+      },
+      3: {
+        title: "3. Apache Airflow Orchestration",
+        desc: "The orchestration engine schedule runs DAG workflows (e.g. loan_default_mlops_pipeline). It triggers scheduled data batch loads from PostgreSQL, schedules Great Expectations quality contracts, performs data drift checking, and activates conditional model retraining.",
+        meta: "airflow/dags/loan_default_dag.py",
+        nodes: ["node-3"],
+        flows: ["flow-3"]
+      },
+      4: {
+        title: "4. MLflow Experiment & Model Registry",
+        desc: "XGBoost classifiers trained inside the Airflow sequence are logged here. Hyperparameters, accuracy metrics, confusion matrices, and ROC curves are compiled. The model artifact is stored, versioned, and automatically promoted to 'Production' stage if drift thresholds are crossed.",
+        meta: "src/train.py",
+        nodes: ["node-4"],
+        flows: ["flow-4"]
+      },
+      5: {
+        title: "5. FastAPI Prediction Service",
+        desc: "Exposes real-time endpoints for credit decision scoring. The application retrieves the model registered in 'Production' directly from the MLflow database connection. Exposes standard REST routes (`/predict`).",
+        meta: "app/main.py",
+        nodes: ["node-5"],
+        flows: ["flow-5"]
+      },
+      6: {
+        title: "6. Docker Container & Cloud Host",
+        desc: "FastAPI is packaged inside a Docker image to provide execution portability. Implements standardized container layers to spawn instances across cloud environments (EC2, Render, Kubernetes).",
+        meta: "Dockerfile",
+        nodes: ["node-6"],
+        flows: ["flow-6"]
+      },
+      7: {
+        title: "7. Real-Time Predictions feedback",
+        desc: "Inference outcomes are returned immediately to user-facing applications. The generated predictions are asynchronously written back into PostgreSQL alongside the client identifiers to establish feedback metrics.",
+        meta: "Feedback Loop",
+        nodes: ["node-7"],
+        flows: ["flow-7", "flow-9"]
+      },
+      8: {
+        title: "8. Evidently AI Monitoring",
+        desc: "Compares current prediction inputs and outcomes (last 20% records in database) against historical training references (first 80% baseline). It checks for covariate shift, target drift, and precision/recall degradation, dumping data dashboards as HTML.",
+        meta: "src/drift.py",
+        nodes: ["node-8", "node-9"],
+        flows: ["flow-10"]
+      },
+      9: {
+        title: "9. Trigger Model Retrain Loop",
+        desc: "If Evidently AI detects feature/target drift above the critical 35% threshold, a branching decision in Airflow triggers model training. It retrieves updated data from PostgreSQL, runs Great Expectations checks, runs the XGBoost training loop, and promotes the newly-fitted model to production.",
+        meta: "src/train.py",
+        nodes: ["node-11", "node-10"],
+        flows: ["flow-11", "flow-12", "flow-13"]
+      }
+    };
+
+    let activeStep = null;
+    let isPlaying = true;
+    let speed = 1.0;
+
+    const svg = document.getElementById('architectureSvg');
+    const flowLines = svg.querySelectorAll('[class^="flow-line"]');
+    const nodeGroups = svg.querySelectorAll('.node-group');
+
+    // Controls
+    const btnPlayPause = document.getElementById('btnPlayPause');
+    const speedSlider = document.getElementById('speedSlider');
+    const speedVal = document.getElementById('speedVal');
+    const btnReset = document.getElementById('btnReset');
+    const stepItems = document.querySelectorAll('.step-item');
+    
+    const expTitle = document.getElementById('expTitle');
+    const expDesc = document.getElementById('expDesc');
+    const metaContainer = document.getElementById('metaContainer');
+    const btnPrev = document.getElementById('btnPrev');
+    const btnNext = document.getElementById('btnNext');
+
+    // Play Pause Functionality
+    btnPlayPause.addEventListener('click', () => {
+      isPlaying = !isPlaying;
+      if (isPlaying) {
+        btnPlayPause.textContent = "⏸ Pause Flow";
+        btnPlayPause.classList.remove('btn-primary');
+        flowLines.forEach(line => line.style.animationPlayState = 'running');
+      } else {
+        btnPlayPause.textContent = "▶ Play Flow";
+        btnPlayPause.classList.add('btn-primary');
+        flowLines.forEach(line => line.style.animationPlayState = 'paused');
+      }
+    });
+
+    // Speed Slider
+    speedSlider.addEventListener('input', (e) => {
+      speed = parseFloat(e.target.value);
+      speedVal.textContent = speed.toFixed(1) + 'x';
+      updateAnimationSpeed();
+    });
+
+    function updateAnimationSpeed() {
+      flowLines.forEach(line => {
+        // Base duration based on flow line class
+        let baseDuration = 1.2;
+        if (line.classList.contains('flow-line-orange')) baseDuration = 1.4;
+        if (line.classList.contains('flow-line-green')) baseDuration = 1.3;
+        if (line.classList.contains('flow-line-red')) baseDuration = 1.0;
+        
+        line.style.animationDuration = (baseDuration / speed) + 's';
+      });
+    }
+
+    // Step Highlighting
+    function selectStep(stepNum) {
+      if (stepNum < 1 || stepNum > 9) return;
+      activeStep = stepNum;
+      
+      // Update sidebar UI
+      stepItems.forEach(item => {
+        const itemStep = parseInt(item.getAttribute('data-step'));
+        if (itemStep === stepNum) {
+          item.classList.add('active');
+          item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+          item.classList.remove('active');
+        }
+      });
+
+      // Update Explanation Panel
+      const stepData = stepsData[stepNum];
+      expTitle.textContent = stepData.title;
+      expDesc.textContent = stepData.desc;
+      metaContainer.innerHTML = `<span class="meta-tag">📂 ${stepData.meta}</span>`;
+
+      // Highlight SVG Elements
+      // Dim all groups
+      nodeGroups.forEach(g => {
+        g.classList.add('dimmed');
+        g.classList.remove('highlighted');
+      });
+      flowLines.forEach(line => {
+        line.classList.add('dimmed');
+        line.classList.remove('highlighted-flow');
+      });
+
+      // Highlight target groups
+      stepData.nodes.forEach(nodeId => {
+        const el = document.getElementById(nodeId);
+        if (el) {
+          el.classList.remove('dimmed');
+          el.classList.add('highlighted');
+        }
+      });
+
+      // Highlight target flow tracks
+      stepData.flows.forEach(flowId => {
+        const el = document.getElementById(flowId);
+        if (el) {
+          el.classList.remove('dimmed');
+          el.classList.add('highlighted-flow');
+        }
+      });
+    }
+
+    // Add event listeners to list items
+    stepItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const stepNum = parseInt(item.getAttribute('data-step'));
+        selectStep(stepNum);
+      });
+    });
+
+    // Add event listeners directly to SVG nodes
+    nodeGroups.forEach(group => {
+      group.addEventListener('click', () => {
+        const id = group.getAttribute('id');
+        // Find which step references this node ID
+        for (const [stepNum, data] of Object.entries(stepsData)) {
+          if (data.nodes.includes(id)) {
+            selectStep(parseInt(stepNum));
+            break;
+          }
+        }
+      });
+    });
+
+    // Reset Highlights
+    btnReset.addEventListener('click', () => {
+      activeStep = null;
+      stepItems.forEach(item => item.classList.remove('active'));
+      nodeGroups.forEach(g => {
+        g.classList.remove('dimmed');
+        g.classList.remove('highlighted');
+      });
+      flowLines.forEach(line => {
+        line.classList.remove('dimmed');
+        line.classList.remove('highlighted-flow');
+      });
+      expTitle.textContent = "Select a step to inspect";
+      expDesc.textContent = "Click any of the stages in the list above, or click directly on the diagram cards to highlight details and view implementing files.";
+      metaContainer.innerHTML = "";
+    });
+
+    // Navigation Buttons
+    btnPrev.addEventListener('click', () => {
+      if (activeStep === null) {
+        selectStep(9);
+      } else {
+        let prev = activeStep - 1;
+        if (prev < 1) prev = 9;
+        selectStep(prev);
+      }
+    });
+
+    btnNext.addEventListener('click', () => {
+      if (activeStep === null) {
+        selectStep(1);
+      } else {
+        let next = activeStep + 1;
+        if (next > 9) next = 1;
+        selectStep(next);
+      }
+    });
+
+    // Initialize
+    updateAnimationSpeed();
+  </script>
+</body>
+</html>
