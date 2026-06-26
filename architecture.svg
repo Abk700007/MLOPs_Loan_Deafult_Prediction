@@ -1,0 +1,543 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="100%" height="100%">
+  <defs>
+    <!-- Background Grid Pattern -->
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255, 255, 255, 0.03)" stroke-width="1"/>
+    </pattern>
+
+    <!-- Node Card Gradients -->
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="airflowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#172554" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="monitoringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2d1500" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+
+    <!-- Neon Glow Filters -->
+    <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <filter id="glow-orange" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <filter id="glow-green" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <filter id="glow-red" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    
+    <!-- Path Markers (Arrows) -->
+    <marker id="arrow-cyan" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#00d2ff" />
+    </marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#ff9f00" />
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#39ff14" />
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#ff4d4d" />
+    </marker>
+  </defs>
+
+  <style>
+    /* Styling rules */
+    text {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      fill: #f8fafc;
+    }
+    .title {
+      font-size: 24px;
+      font-weight: 800;
+      fill: #f8fafc;
+      letter-spacing: -0.5px;
+    }
+    .subtitle {
+      font-size: 14px;
+      font-weight: 400;
+      fill: #94a3b8;
+    }
+    .node-card {
+      stroke: #334155;
+      stroke-width: 1.5;
+      transition: all 0.3s ease;
+    }
+    .node-card:hover {
+      stroke: #475569;
+      fill-opacity: 0.95;
+    }
+    .node-title {
+      font-size: 14px;
+      font-weight: 700;
+      fill: #f1f5f9;
+    }
+    .node-desc {
+      font-size: 11px;
+      fill: #94a3b8;
+    }
+    .tech-badge {
+      font-size: 10px;
+      font-weight: 600;
+      fill: #cbd5e1;
+    }
+    
+    /* Flow Animations */
+    @keyframes flow-dash {
+      to {
+        stroke-dashoffset: -40;
+      }
+    }
+    .track-line {
+      fill: none;
+      stroke: #1e293b;
+      stroke-width: 2.5;
+    }
+    .flow-line-blue {
+      fill: none;
+      stroke: #00d2ff;
+      stroke-width: 2.5;
+      stroke-dasharray: 8, 6;
+      animation: flow-dash 1.2s linear infinite;
+    }
+    .flow-line-orange {
+      fill: none;
+      stroke: #ff9f00;
+      stroke-width: 2.5;
+      stroke-dasharray: 8, 6;
+      animation: flow-dash 1.4s linear infinite;
+    }
+    .flow-line-green {
+      fill: none;
+      stroke: #39ff14;
+      stroke-width: 2.5;
+      stroke-dasharray: 8, 6;
+      animation: flow-dash 1.3s linear infinite;
+    }
+    .flow-line-red {
+      fill: none;
+      stroke: #ff4d4d;
+      stroke-width: 2.5;
+      stroke-dasharray: 8, 6;
+      animation: flow-dash 1s linear infinite;
+    }
+
+    /* Sub-pipelines inside Airflow Card */
+    .airflow-subtask {
+      fill: #1e293b;
+      stroke: #334155;
+      stroke-width: 1;
+      rx: 6;
+    }
+    .airflow-subtask-active {
+      fill: #0f172a;
+      stroke: #38bdf8;
+      stroke-width: 1.5;
+      rx: 6;
+    }
+    .subtask-text {
+      font-size: 11px;
+      font-weight: 600;
+      fill: #e2e8f0;
+      text-anchor: middle;
+    }
+    
+    /* Tech Stack Panel styling */
+    .tech-stack-bg {
+      fill: #0b0f19;
+      stroke: #1e293b;
+      stroke-width: 1.5;
+      rx: 12;
+    }
+    
+    /* Highlights for interactive view */
+    .highlight-active {
+      stroke-width: 3 !important;
+      filter: drop-shadow(0px 0px 8px rgba(56, 189, 248, 0.5));
+    }
+    .node-group {
+      cursor: pointer;
+    }
+  </style>
+
+  <!-- Background color -->
+  <rect width="100%" height="100%" fill="#0b0f19" />
+  <!-- Grid -->
+  <rect width="100%" height="100%" fill="url(#grid)" />
+
+  <!-- ==================== HEADER ==================== -->
+  <g transform="translate(40, 50)">
+    <!-- Rocket Icon -->
+    <path d="M 0 10 Q 5 -10 15 -15 Q 12 -5 10 5 L 14 11 L 8 9 Z" fill="#ff4d4d" transform="scale(1.5) translate(-5, 5)" />
+    <path d="M 12 -5 L 5 0 L 2 5 L 8 4 Z" fill="#ff9f00" transform="scale(1.5) translate(-5, 5)" />
+    <text x="35" y="10" class="title">MLOps Loan Default Prediction – End-to-End Pipeline</text>
+    <text x="35" y="30" class="subtitle">Continuous data integration, schema validation, drift monitoring, and automated retraining</text>
+  </g>
+
+  <!-- ==================== LEGEND ==================== -->
+  <g transform="translate(760, 42)">
+    <rect width="400" height="40" fill="#111827" stroke="#1e293b" stroke-width="1" rx="6" />
+    
+    <!-- Data Flow -->
+    <line x1="15" y1="20" x2="45" y2="20" stroke="#00d2ff" stroke-width="2.5" stroke-dasharray="4, 3" />
+    <circle cx="30" cy="20" r="3" fill="#00d2ff" />
+    <text x="52" y="24" font-size="11" fill="#cbd5e1" font-weight="600">Data Flow</text>
+
+    <!-- Monitoring Flow -->
+    <line x1="125" y1="20" x2="155" y2="20" stroke="#ff9f00" stroke-width="2.5" stroke-dasharray="4, 3" />
+    <circle cx="140" cy="20" r="3" fill="#ff9f00" />
+    <text x="162" y="24" font-size="11" fill="#cbd5e1" font-weight="600">Monitoring</text>
+
+    <!-- Model Promotion -->
+    <line x1="235" y1="20" x2="265" y2="20" stroke="#39ff14" stroke-width="2.5" stroke-dasharray="4, 3" />
+    <circle cx="250" cy="20" r="3" fill="#39ff14" />
+    <text x="272" y="24" font-size="11" fill="#cbd5e1" font-weight="600">Model Flow</text>
+
+    <!-- Retrain Trigger -->
+    <line x1="335" y1="20" x2="365" y2="20" stroke="#ff4d4d" stroke-width="2.5" stroke-dasharray="4, 3" />
+    <circle cx="350" cy="20" r="3" fill="#ff4d4d" />
+    <text x="372" y="24" font-size="11" fill="#cbd5e1" font-weight="600">Retrain</text>
+  </g>
+
+  <!-- ==================== FLOW LINES (BACKGROUND TRACKS & ANIMATIONS) ==================== -->
+  
+  <!-- 1. Data Sources -> PostgreSQL -->
+  <path id="track-1" class="track-line" d="M 230 185 L 290 185" />
+  <path id="flow-1" class="flow-line-blue" d="M 230 185 L 290 185" marker-end="url(#arrow-cyan)" />
+
+  <!-- 2. PostgreSQL -> Airflow Ingest -->
+  <path id="track-2" class="track-line" d="M 470 185 L 530 185" />
+  <path id="flow-2" class="flow-line-blue" d="M 470 185 L 530 185" marker-end="url(#arrow-cyan)" />
+
+  <!-- 3. Airflow (Train) -> MLflow -->
+  <path id="track-3" class="track-line" d="M 870 185 L 930 185" />
+  <path id="flow-3" class="flow-line-green" d="M 870 185 L 930 185" marker-end="url(#arrow-green)" />
+
+  <!-- 4. MLflow -> FastAPI -->
+  <path id="track-4" class="track-line" d="M 1020 230 L 1020 380" />
+  <path id="flow-4" class="flow-line-green" d="M 1020 230 L 1020 380" marker-end="url(#arrow-green)" />
+
+  <!-- 5. FastAPI -> Docker / Cloud -->
+  <path id="track-5" class="track-line" d="M 930 425 L 870 425" />
+  <path id="flow-5" class="flow-line-blue" d="M 930 425 L 870 425" marker-end="url(#arrow-cyan)" />
+
+  <!-- 6. Docker / Cloud -> Predictions -->
+  <path id="track-6" class="track-line" d="M 690 425 L 630 425" />
+  <path id="flow-6" class="flow-line-blue" d="M 690 425 L 630 425" marker-end="url(#arrow-cyan)" />
+
+  <!-- 7. Predictions -> DB (Feedback Loop) -->
+  <path id="track-7" class="track-line" d="M 540 380 L 540 310 L 380 310 L 380 230" />
+  <path id="flow-7" class="flow-line-orange" d="M 540 380 L 540 310 L 380 310 L 380 230" marker-end="url(#arrow-orange)" />
+
+  <!-- 8. PostgreSQL -> Evidently AI (Monitoring Baseline) -->
+  <path id="track-8" class="track-line" d="M 350 230 L 350 290 L 260 290 L 260 380" />
+  <path id="flow-8" class="flow-line-orange" d="M 350 230 L 350 290 L 260 290 L 260 380" marker-end="url(#arrow-orange)" />
+
+  <!-- 9. Predictions -> Evidently AI (Monitoring Current) -->
+  <path id="track-9" class="track-line" d="M 450 425 L 390 425" />
+  <path id="flow-9" class="flow-line-orange" d="M 450 425 L 390 425" marker-end="url(#arrow-orange)" />
+
+  <!-- 10. Evidently AI -> Drift Decision -->
+  <path id="track-10" class="track-line" d="M 280 490 L 280 540" />
+  <path id="flow-10" class="flow-line-orange" d="M 280 490 L 280 540" marker-end="url(#arrow-orange)" />
+
+  <!-- 11. Drift Decision -> Trigger Retraining (Yes branch) -->
+  <path id="track-11" class="track-line" d="M 330 590 L 410 590" />
+  <path id="flow-11" class="flow-line-red" d="M 330 590 L 410 590" marker-end="url(#arrow-red)" />
+
+  <!-- 12. Drift Decision -> Skip Retraining / Keep Model (No branch) -->
+  <path id="track-12" class="track-line" d="M 230 590 L 170 590" />
+  <path id="flow-12" class="flow-line-green" d="M 230 590 L 170 590" marker-end="url(#arrow-green)" />
+
+  <!-- 13. Trigger Retraining -> Airflow Retrain Operator -->
+  <path id="track-13" class="track-line" d="M 510 550 L 510 510 L 700 510 L 700 260" />
+  <path id="flow-13" class="flow-line-red" d="M 510 550 L 510 510 L 700 510 L 700 260" marker-end="url(#arrow-red)" />
+
+
+  <!-- ==================== PIPELINE NODES ==================== -->
+
+  <!-- STEP 1: Data Sources -->
+  <g class="node-group" id="node-1" transform="translate(50, 140)">
+    <rect width="180" height="90" fill="url(#cardGrad)" class="node-card" rx="10" />
+    <text x="15" y="25" class="node-title">1. Data Sources</text>
+    <text x="15" y="45" class="node-desc">Loan Applications</text>
+    <text x="15" y="60" class="node-desc">New Customer Profile Data</text>
+    <!-- Icons placeholder/drawing -->
+    <circle cx="150" cy="45" r="16" fill="#1e293b" stroke="#475569" stroke-width="1" />
+    <path d="M 144 52 C 144 48 147 46 150 46 C 153 46 156 48 156 52 Z M 150 44 C 147.8 44 146 42.2 146 40 C 146 37.8 147.8 36 150 36 C 152.2 36 154 37.8 154 40 C 154 42.2 152.2 44 150 44 Z" fill="#38bdf8" />
+  </g>
+
+  <!-- STEP 2: PostgreSQL Database -->
+  <g class="node-group" id="node-2" transform="translate(290, 140)">
+    <rect width="180" height="90" fill="url(#cardGrad)" class="node-card" rx="10" />
+    <!-- Postgres Elephant Icon Vector -->
+    <circle cx="150" cy="45" r="16" fill="#1e293b" stroke="#336791" stroke-width="1" />
+    <path d="M 143 43 C 143 38 148 37 151 37 C 154 37 157 39 157 42 C 157 45 155 46 153 47 C 152 48 153 50 151 51 C 149 52 147 50 146 49 C 145 49 144 47 143 45 Z" fill="#336791" />
+    <path d="M 142 45 L 140 47 L 141 49 C 141 49 143 46 142 45 Z" fill="#cbd5e1" />
+    <text x="15" y="25" class="node-title">2. PostgreSQL DB</text>
+    <text x="15" y="45" class="node-desc">Stores Raw Loans</text>
+    <text x="15" y="60" class="node-desc">Historical &amp; Live Batches</text>
+    <rect x="15" y="70" width="70" height="14" fill="#1e293b" rx="3" />
+    <text x="20" y="81" class="tech-badge">POSTGRESQL</text>
+  </g>
+
+  <!-- STEP 3: Apache Airflow (Orchestrator Box) -->
+  <g class="node-group" id="node-3" transform="translate(530, 110)">
+    <!-- Airflow Container Card -->
+    <rect width="340" height="150" fill="url(#airflowGrad)" class="node-card" rx="12" />
+    
+    <!-- Airflow Pinwheel Logo -->
+    <g transform="translate(305, 30) scale(0.8)">
+      <circle cx="0" cy="0" r="16" fill="#0f172a" stroke="#017cee" stroke-width="1" />
+      <path d="M -6 -6 C -6 -12 0 -12 0 -6 L 0 0 L -6 0 Z" fill="#017cee" />
+      <path d="M 6 -6 C 12 -6 12 0 6 0 L 0 0 L 0 -6 Z" fill="#ff4d4d" />
+      <path d="M 6 6 C 6 12 0 12 0 6 L 0 0 L 6 0 Z" fill="#ff9f00" />
+      <path d="M -6 6 C -12 6 -12 0 -6 0 L 0 0 L 0 6 Z" fill="#39ff14" />
+    </g>
+    
+    <text x="20" y="30" class="node-title" font-size="15">3. Apache Airflow Pipeline</text>
+    <text x="20" y="48" class="node-desc" fill="#94a3b8">DAG orchestration for scheduled weekly training runs</text>
+    
+    <!-- Subtask Pipeline Inside Airflow -->
+    <!-- Task A: Ingest -->
+    <g transform="translate(20, 75)">
+      <rect width="65" height="50" class="airflow-subtask-active" />
+      <text x="32.5" y="22" class="subtask-text">run_</text>
+      <text x="32.5" y="37" class="subtask-text">ingestion</text>
+    </g>
+    <!-- Arrow -->
+    <path d="M 90 100 L 98 100" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow-cyan)" />
+
+    <!-- Task B: Validate -->
+    <g transform="translate(103, 75)">
+      <rect width="65" height="50" class="airflow-subtask" />
+      <text x="32.5" y="22" class="subtask-text">run_</text>
+      <text x="32.5" y="37" class="subtask-text">validation</text>
+      <!-- Small Great Expectations badge indicator -->
+      <circle cx="58" cy="8" r="5" fill="#ff5a5f" />
+    </g>
+    <!-- Arrow -->
+    <path d="M 173 100 L 181 100" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow-cyan)" />
+
+    <!-- Task C: Drift Check -->
+    <g transform="translate(186, 75)">
+      <rect width="65" height="50" class="airflow-subtask" />
+      <text x="32.5" y="22" class="subtask-text">check_</text>
+      <text x="32.5" y="37" class="subtask-text">drift</text>
+      <!-- Small Evidently badge indicator -->
+      <circle cx="58" cy="8" r="5" fill="#7e3af2" />
+    </g>
+    <!-- Arrow -->
+    <path d="M 256 100 L 264 100" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow-cyan)" />
+
+    <!-- Task D: Retrain Model -->
+    <g transform="translate(269, 75)">
+      <rect width="55" height="50" class="airflow-subtask" />
+      <text x="27.5" y="22" class="subtask-text">retrain_</text>
+      <text x="27.5" y="37" class="subtask-text">model</text>
+      <!-- Small XGBoost badge indicator -->
+      <circle cx="48" cy="8" r="5" fill="#0194e2" />
+    </g>
+  </g>
+
+  <!-- STEP 4: MLflow Registry -->
+  <g class="node-group" id="node-4" transform="translate(930, 140)">
+    <rect width="180" height="90" fill="url(#cardGrad)" class="node-card" rx="10" />
+    <circle cx="150" cy="45" r="16" fill="#1e293b" stroke="#0194e2" stroke-width="1" />
+    <!-- MLflow wave shape icon -->
+    <path d="M 140 45 Q 145 35 150 45 T 160 45" fill="none" stroke="#0194e2" stroke-width="2" />
+    <text x="15" y="25" class="node-title">4. MLflow Registry</text>
+    <text x="15" y="45" class="node-desc">Model Registry</text>
+    <text x="15" y="60" class="node-desc">&amp; Parameter Tracking</text>
+    <rect x="15" y="70" width="55" height="14" fill="#1e293b" rx="3" />
+    <text x="20" y="81" class="tech-badge">MLFLOW</text>
+  </g>
+
+  <!-- STEP 5: FastAPI Service -->
+  <g class="node-group" id="node-5" transform="translate(930, 380)">
+    <rect width="180" height="90" fill="url(#cardGrad)" class="node-card" rx="10" />
+    <circle cx="150" cy="45" r="16" fill="#1e293b" stroke="#059669" stroke-width="1" />
+    <!-- FastAPI Lightning Bolt -->
+    <path d="M 151 35 L 144 45 L 149 45 L 147 55 L 155 43 L 150 43 Z" fill="#059669" />
+    <text x="15" y="25" class="node-title">5. FastAPI Service</text>
+    <text x="15" y="45" class="node-desc">Inference API Endpoint</text>
+    <text x="15" y="60" class="node-desc">Loads 'Production' Model</text>
+    <rect x="15" y="70" width="50" height="14" fill="#1e293b" rx="3" />
+    <text x="20" y="81" class="tech-badge">FASTAPI</text>
+  </g>
+
+  <!-- STEP 6: Docker / Cloud Deployment -->
+  <g class="node-group" id="node-6" transform="translate(690, 380)">
+    <rect width="180" height="90" fill="url(#cardGrad)" class="node-card" rx="10" />
+    <circle cx="150" cy="45" r="16" fill="#1e293b" stroke="#2496ed" stroke-width="1" />
+    <!-- Docker Whale simplified shape -->
+    <path d="M 139 46 Q 140 40 148 40 L 154 40 Q 158 40 160 44 L 161 46 Q 163 46 163 48 Q 161 52 145 52 L 139 52 Z" fill="#2496ed" />
+    <rect x="144" y="36" width="4" height="3" fill="#cbd5e1" />
+    <rect x="149" y="36" width="4" height="3" fill="#cbd5e1" />
+    <text x="15" y="25" class="node-title">6. Container Cloud</text>
+    <text x="15" y="45" class="node-desc">Dockerized App Host</text>
+    <text x="15" y="60" class="node-desc">AWS EC2 / Render Deployment</text>
+    <rect x="15" y="70" width="50" height="14" fill="#1e293b" rx="3" />
+    <text x="20" y="81" class="tech-badge">DOCKER</text>
+  </g>
+
+  <!-- STEP 7: Predictions -->
+  <g class="node-group" id="node-7" transform="translate(450, 380)">
+    <rect width="180" height="90" fill="url(#cardGrad)" class="node-card" rx="10" />
+    <circle cx="150" cy="45" r="16" fill="#1e293b" stroke="#a855f7" stroke-width="1" />
+    <!-- Chart Icon -->
+    <rect x="142" y="44" width="4" height="8" fill="#a855f7" />
+    <rect x="148" y="39" width="4" height="13" fill="#a855f7" />
+    <rect x="154" y="42" width="4" height="10" fill="#a855f7" />
+    <text x="15" y="25" class="node-title">7. Predictions</text>
+    <text x="15" y="45" class="node-desc">Returned to Client App</text>
+    <text x="15" y="60" class="node-desc">Logged back to DB for Audit</text>
+    <rect x="15" y="70" width="55" height="14" fill="#1e293b" rx="3" />
+    <text x="20" y="81" class="tech-badge">REALTIME</text>
+  </g>
+
+  <!-- STEP 8: Evidently AI (Monitoring Dashboard) -->
+  <g class="node-group" id="node-8" transform="translate(150, 380)">
+    <!-- Monitoring Container -->
+    <rect width="240" height="110" fill="url(#monitoringGrad)" class="node-card" rx="12" />
+    
+    <!-- Evidently AI Logo Circle -->
+    <circle cx="210" cy="35" r="16" fill="#0f172a" stroke="#7e3af2" stroke-width="1" />
+    <path d="M 202 38 L 208 30 L 212 36 L 218 32" fill="none" stroke="#7e3af2" stroke-width="2.5" />
+    <circle cx="218" cy="32" r="1.5" fill="#7e3af2" />
+    
+    <text x="15" y="25" class="node-title" fill="#ff9f00">8. Evidently AI Monitor</text>
+    <text x="15" y="45" class="node-desc" fill="#e2e8f0">Runs validation of prediction drift</text>
+    
+    <!-- Checks list -->
+    <rect x="15" y="58" width="65" height="18" fill="#1e293b" rx="3" />
+    <text x="20" y="70" font-size="9" fill="#e2e8f0" font-weight="600">Data Drift</text>
+
+    <rect x="85" y="58" width="65" height="18" fill="#1e293b" rx="3" />
+    <text x="90" y="70" font-size="9" fill="#e2e8f0" font-weight="600">Target Drift</text>
+
+    <rect x="155" y="58" width="70" height="18" fill="#1e293b" rx="3" />
+    <text x="160" y="70" font-size="9" fill="#e2e8f0" font-weight="600">Perf Loss</text>
+
+    <text x="15" y="95" class="node-desc" fill="#94a3b8">Saves dashboard report to HTML</text>
+  </g>
+
+  <!-- STEP 9: Drift Decision Diamond -->
+  <g class="node-group" id="node-9" transform="translate(230, 540)">
+    <!-- Diamond -->
+    <polygon points="50,0 100,50 50,100 0,50" fill="url(#cardGrad)" stroke="#ff9f00" stroke-width="1.5" class="node-card" />
+    <text x="50" y="45" font-size="11" font-weight="700" fill="#f8fafc" text-anchor="middle">Data Drift</text>
+    <text x="50" y="60" font-size="11" font-weight="700" fill="#f8fafc" text-anchor="middle">Detected?</text>
+    
+    <!-- Yes / No tags on output edges -->
+    <!-- Yes Arrow goes Right -->
+    <text x="112" y="40" font-size="11" font-weight="700" fill="#ff4d4d">Yes</text>
+    <!-- No Arrow goes Left -->
+    <text x="-22" y="40" font-size="11" font-weight="700" fill="#39ff14">No</text>
+  </g>
+
+  <!-- STEP 10: Continue Using Current Model -->
+  <g class="node-group" id="node-10" transform="translate(30, 560)">
+    <rect width="140" height="60" fill="url(#cardGrad)" stroke="#39ff14" stroke-dasharray="4,2" class="node-card" rx="8" />
+    <text x="12" y="25" font-size="11" font-weight="700" fill="#39ff14">✔ Safe Status</text>
+    <text x="12" y="42" class="node-desc">Current production</text>
+    <text x="12" y="52" class="node-desc">model remains active</text>
+  </g>
+
+  <!-- STEP 11: Trigger Retraining -->
+  <g class="node-group" id="node-11" transform="translate(410, 550)">
+    <rect width="200" height="80" fill="url(#cardGrad)" stroke="#ff4d4d" class="node-card" rx="10" />
+    <!-- Retrain refresh arrow icon -->
+    <g transform="translate(170, 40) scale(0.9)">
+      <circle cx="0" cy="0" r="14" fill="#1e293b" stroke="#ff4d4d" stroke-width="1.5" />
+      <path d="M -6 -2 A 7 7 0 1 1 5 4 L 8 4" fill="none" stroke="#ff4d4d" stroke-width="2" />
+      <path d="M 5 1 L 8 4 L 5 7" fill="none" stroke="#ff4d4d" stroke-width="2" />
+    </g>
+    <text x="15" y="25" class="node-title" fill="#ff4d4d">9. Trigger Retraining</text>
+    <text x="15" y="45" class="node-desc">Branch activates in Airflow</text>
+    <text x="15" y="60" class="node-desc">Starts 'retrain_model' operator</text>
+  </g>
+
+
+  <!-- ==================== TECH STACK CAROUSEL / BOTTOM PANEL ==================== -->
+  <g transform="translate(50, 680)">
+    <rect width="1100" height="85" class="tech-stack-bg" />
+    
+    <text x="25" y="32" font-size="13" font-weight="700" fill="#94a3b8" letter-spacing="1">PROJECT TECH STACK</text>
+    
+    <!-- Python -->
+    <g transform="translate(25, 45)">
+      <!-- Snake shapes -->
+      <path d="M 8 -4 L 14 -4 A 4 4 0 0 1 18 0 L 18 4 A 4 4 0 0 1 14 8 L 10 8 A 4 4 0 0 1 6 4 L 6 2 Z" fill="#38bdf8" />
+      <path d="M 12 14 L 6 14 A 4 4 0 0 1 2 10 L 2 6 A 4 4 0 0 1 6 2 L 10 2 A 4 4 0 0 1 14 6 L 14 8 Z" fill="#ffde59" />
+      <!-- Dots -->
+      <circle cx="9" cy="0" r="1" fill="#fff" />
+      <circle cx="11" cy="10" r="1" fill="#000" />
+      <text x="24" y="10" font-size="11" font-weight="700" fill="#cbd5e1">Python</text>
+    </g>
+    
+    <!-- PostgreSQL -->
+    <g transform="translate(125, 45)">
+      <circle cx="8" cy="5" r="7" fill="#336791" />
+      <text x="22" y="10" font-size="11" font-weight="700" fill="#cbd5e1">PostgreSQL</text>
+    </g>
+    
+    <!-- Apache Airflow -->
+    <g transform="translate(245, 45)">
+      <circle cx="8" cy="5" r="7" fill="#017cee" />
+      <text x="22" y="10" font-size="11" font-weight="700" fill="#cbd5e1">Apache Airflow</text>
+    </g>
+
+    <!-- Great Expectations -->
+    <g transform="translate(390, 45)">
+      <circle cx="8" cy="5" r="7" fill="#ff5a5f" />
+      <text x="22" y="10" font-size="11" font-weight="700" fill="#cbd5e1">Great Expectations</text>
+    </g>
+
+    <!-- XGBoost -->
+    <g transform="translate(550, 45)">
+      <rect x="0" y="-1" width="16" height="12" fill="#0194e2" rx="2" />
+      <text x="22" y="10" font-size="11" font-weight="700" fill="#cbd5e1">XGBoost</text>
+    </g>
+
+    <!-- MLflow -->
+    <g transform="translate(650, 45)">
+      <circle cx="8" cy="5" r="7" fill="#0194e2" />
+      <text x="22" y="10" font-size="11" font-weight="700" fill="#cbd5e1">MLflow</text>
+    </g>
+
+    <!-- FastAPI -->
+    <g transform="translate(745, 45)">
+      <circle cx="8" cy="5" r="7" fill="#059669" />
+      <text x="22" y="10" font-size="11" font-weight="700" fill="#cbd5e1">FastAPI</text>
+    </g>
+
+    <!-- Docker -->
+    <g transform="translate(840, 45)">
+      <circle cx="8" cy="5" r="7" fill="#2496ed" />
+      <text x="22" y="10" font-size="11" font-weight="700" fill="#cbd5e1">Docker</text>
+    </g>
+
+    <!-- Evidently AI -->
+    <g transform="translate(930, 45)">
+      <circle cx="8" cy="5" r="7" fill="#7e3af2" />
+      <text x="22" y="10" font-size="11" font-weight="700" fill="#cbd5e1">Evidently AI</text>
+    </g>
+  </g>
+  
+  <!-- Info Tooltip for Hover -->
+  <g transform="translate(50, 745)">
+    <text x="0" y="0" font-size="10" fill="#64748b" font-style="italic">💡 Tip: The animated lines represent the continuous flow of data and training triggers. Hover or click nodes in the browser presentation viewer for more info.</text>
+  </g>
+</svg>
