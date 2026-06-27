@@ -72,6 +72,20 @@ This scorecard shows how the repository maps directly to the project grading rub
 
 ---
 
+## 📊 Dataset & Source Selection
+
+This project is built using the **Home Credit Default Risk** dataset, representing a real-world enterprise credit risk scenario.
+
+*   **Source:** Sourced and downloaded from the official [Kaggle Home Credit Default Risk Competition](https://www.kaggle.com/c/home-credit-default-risk).
+*   **Target Variable (`TARGET`):** Binary classification indicating loan default (`1` - Client had payment difficulties / default, `0` - Client repaid loan on time).
+
+### Why This Dataset Was Selected:
+1.  **Real-world Class Imbalance:** The default rate is highly imbalanced (~8.05%). This represents realistic banking scenarios where defaults are rare but represent severe losses, forcing the implementation of dynamic class weighting (`scale_pos_weight`) and decision boundary tuning rather than relying on raw accuracy.
+2.  **Complex Demographics & Feature Drift:** Demographic and credit features (e.g. debt-to-income ratio, age, external risk ratings) drift naturally due to evolving economic cycles. This provides the perfect data structure for Evidently AI to execute statistical Kolmogorov-Smirnov tests and trigger retraining.
+3.  **Logical Constraints Validation:** The external credit scores (`EXT_SOURCE_2`, `EXT_SOURCE_3`) have a direct, monotonic relationship with default risk. This allows us to enforce monotonic constraints on XGBoost trees to guarantee risk predictions are mathematically consistent and explainable.
+
+---
+
 ## 🛠️ Enterprise Technology Stack
 
 The pipeline integrates the following enterprise-grade technologies to deliver a robust MLOps solution:
